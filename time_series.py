@@ -1,13 +1,16 @@
 import os
 import pandas as pd
+import numpy as np
 import time
 import matplotlib.pyplot as plt
+from scipy import signal
 
 path1 = os.getcwd()+"/data/EPO_App_reg.txt"
 path2 = os.getcwd()+"/data/EPO_CITATIONS.txt"
 path3 = 'company_names_with_matches_first_100.txt'
 moving = os.getcwd()+"/plots/moving_average/"
 total = os.getcwd()+"/plots/total/"
+corr = os.getcwd()+"/plots/corr/"
 
 start = time.time()
 
@@ -179,14 +182,50 @@ ma_dev['deviation'] = ma_dev['citations'] - ma_dev['mean']
 ma_dev.set_index('citation_date', inplace=True)
 ma_dev.to_csv('moving_average_companies.txt', sep='|')
 
-# plots for each company
+# final timeseries for citations and patents
 pat_cits.sort_values(by=['company_name', 'citation_date'], inplace=True)
 pat_cits.set_index('citation_date', inplace=True)
 pat_cits.drop('publication_date', axis=1, inplace=True)
 pat_cits.fillna(0, inplace=True)
 pat_cits.to_csv('citations_and_patents.txt',sep='|')
 
+#cross correlation
+lag_all = []
 names = pd.read_csv('name_keys.txt', sep='|')
+for i in names.index:
+    df = pat_cits.copy()
+    df = df.loc[df['company_name'] == names['key'][i]]
+    ccit = df.iloc[:, 1].values
+    cpat = df.iloc[:, 3].values
+    ccit = (ccit - np.mean(ccit))/ (np.std(ccit)*len(ccit))
+    cpat = (cpat - np.mean(cpat)) / (np.std(cpat))
+    cross = signal.correlate(ccit, cpat, mode='same')
+    lags = signal.correlation_lags(len(ccit), len(cpat), mode='same')
+    lag_all.append(lags[np.argmax(cross)])
+"""     plt.clf()
+    plt.plot(lags,cross, "r-")
+    #plt.xlim([-40,40])
+    plt.minorticks_on()
+    plt.title(str(names['official_name'][i]))
+    plt.xlabel('Lag')
+    plt.ylabel('Cross-correlation')
+    plt.grid(which='major', linestyle='--', linewidth=0.5)
+    plt.savefig(corr+str(names['key'][i])+".png", dpi=300)
+    plt.close('all')  """
+
+# distribution of lags
+ser = pd.Series(lag_all)
+ser = ser.value_counts()  # save in 'lag_value_counts.txt'
+df = pd.read_csv('lag_value_counts.txt', sep='|')
+plt.scatter(df['lag'],df['frequency'])
+plt.plot(df['lag'], df['frequency'], '--', linewidth=0.8)
+plt.minorticks_on()
+plt.xlabel('Lag')
+plt.ylabel('Frequency')
+plt.grid(which='major', linestyle='--', linewidth=0.5)
+plt.savefig("scatter.png", dpi=300)
+
+# plots for each company
 for i in names.index:
     plt.clf()
     df = pat_cits.copy()
