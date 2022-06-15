@@ -191,6 +191,7 @@ pat_cits.to_csv('citations_and_patents.txt',sep='|')
 
 #cross correlation
 lag_all = []
+peak_all = []
 names = pd.read_csv('name_keys.txt', sep='|')
 for i in names.index:
     df = pat_cits.copy()
@@ -201,17 +202,17 @@ for i in names.index:
     cpat = (cpat - np.mean(cpat)) / (np.std(cpat))
     cross = signal.correlate(ccit, cpat, mode='same')
     lags = signal.correlation_lags(len(ccit), len(cpat), mode='same')
-    lag_all.append(lags[np.argmax(cross)])
-"""     plt.clf()
+    lag_all.append(lags[np.argmax(cross)]) 
+    peak_all.append(round(max(cross),2))
+    plt.clf()
     plt.plot(lags,cross, "r-")
-    #plt.xlim([-40,40])
     plt.minorticks_on()
     plt.title(str(names['official_name'][i]))
     plt.xlabel('Lag')
     plt.ylabel('Cross-correlation')
     plt.grid(which='major', linestyle='--', linewidth=0.5)
     plt.savefig(corr+str(names['key'][i])+".png", dpi=300)
-    plt.close('all')  """
+    plt.close('all') 
 
 # distribution of lags
 ser = pd.Series(lag_all)
@@ -224,6 +225,36 @@ plt.xlabel('Lag')
 plt.ylabel('Frequency')
 plt.grid(which='major', linestyle='--', linewidth=0.5)
 plt.savefig("scatter.png", dpi=300)
+
+# distribution of peaks
+ser = pd.Series(peak_all)
+ser = ser.value_counts() 
+ser = ser.reset_index()
+ser.sort_values(by='index', ascending=True, inplace=True)
+ser.columns = ['peak','frequency']
+ser['peak'] = ser['peak'].rolling(window=5).mean()
+ser['frequency'] = ser['frequency'].rolling(window=5).sum()
+ser.to_csv('peak_value_counts.txt', sep='|', index=False) 
+plt.scatter(ser['peak'],ser['frequency'],color='red')
+plt.plot(ser['peak'],ser['frequency'],'r--', linewidth=0.8)
+plt.minorticks_on()
+plt.xlabel('Peak')
+plt.ylabel('Frequency')
+plt.grid(which='major', linestyle='--', linewidth=0.5)
+plt.savefig("peak_scatter.png", dpi=300)
+
+# distribution of lags and peaks
+df = pd.DataFrame(list(zip(peak_all, lag_all, keys)),columns=['peaks','lags','company_name'])
+df = pd.read_csv('colors.txt', sep='|')
+colors = {3:'red', 2:'yellow', 1:'green'}
+plt.scatter(df['lags'],df['peaks'], c=df['color'].map(colors))
+plt.minorticks_on()
+plt.xlabel('Lags')
+plt.ylabel('Peaks')
+plt.grid(which='major', linestyle='--', linewidth=0.5)
+plt.legend(title='frequency', loc='upper left', handles=[line.Line2D([0], [0], marker='o', color='w',
+                           markerfacecolor=v, label=k, markersize=8) for k, v in colors.items()])
+plt.savefig("lags-peaks-colors.png", dpi=200)
 
 # plots for each company
 for i in names.index:
