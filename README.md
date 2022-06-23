@@ -1,6 +1,6 @@
 # Thesis Code
 
-Here is presented the full code that I wrote for my master's thesis "Statistical physics applications in complex systems: Applications of timeseries and correlation methods at innovation network (patents)". <br />
+Here is presented the full code that I wrote for my master's dissertation "Time-series and correlation applications in citation and patent networks for companies in the Εuropean area". <br />
 The order of the files is as follows:
 
 1)filter_cited_patents.py <br />
